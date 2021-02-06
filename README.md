@@ -3,7 +3,7 @@
 
 ### General Description
 The code implements the main idea discussed in 
-<ul> <li> Girum G Demisse and Matt Feiszli. [Approximately Covariant Convolutional Networks](). Hal arXiv, 2021.</li> </ul>
+<ul> <li> Girum Demisse and Matt Feiszli. [Approximately Covariant Convolutional Networks](). Hal arXiv, 2021.</li> </ul>
   
 ### Code of Conduct
 ***If you use this software (Approximately_Covariant_CNN) in its entirety or partially, please consider citing the reference listed above.***
