@@ -3,13 +3,15 @@
 
 ### General Description
 The code implements the main idea discussed in 
-<ul> <li> Girum Demisse and Matt Feiszli. [Approximately Covariant Convolutional Networks](). Hal arXiv, 2021.</li> </ul>
+<ul> <li> Girum Demisse and Matt Feiszli. Approximately Covariant Convolutional Networks. hal-03132459 arXiv, 2021.</li> </ul>
+You can download the document from [here](https://hal.archives-ouvertes.fr/hal-03132459)
   
 ### Code of Conduct
 ***If you use this software (Approximately_Covariant_CNN) in its entirety or partially, please consider citing the reference listed above.***
 
 ### Dataset
-Inorder to conduct a direct test, you need to donwload a test dataset and dump it under "/data" folder; Rot-MNIST can be downloaded from [here](https://sites.google.com/a/lisa.iro.umontreal.ca/public_static_twiki/variations-on-the-mnist-digits)
+Inorder to conduct a direct test, you need to donwload a test dataset and dump it under "/data" folder; Rot-MNIST can be downloaded from [here](https://sites.google.com/a/lisa.iro.umontreal.ca/public_static_twiki/variations-on-the-mnist-digits). I also recommend to play with the model using the 
+[affNIST](http://www.cs.toronto.edu/~tijmen/affNIST/) dataset, which is designed to evaluate a model's robustness to affine transformations.
 
 ### Requirments
 The software is developed and tested using python3 with Pytorch 1.7.1 and Cuda 10.2.
