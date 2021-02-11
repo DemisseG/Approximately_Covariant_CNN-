@@ -302,8 +302,8 @@ def verbose():
     print('| Filter type = ' + str(args.convType))
     if args.convType == 'covar':
         print('| Symmetry set = ' + utils.AUGMENTED_TRANS_SET[args.symset])
-    print('| Normalization of covariance measure = ' + ('YES' if args.normalize else 'NO'))
-    print('| Inference Mode = ' + ('Efficient / Approximate' if args.imode else 'Non-efficient / Exact'))
+        print('| Normalization of covariance measure = ' + ('YES' if args.normalize else 'NO'))
+        print('| Inference Mode = ' + ('Efficient / Approximate' if args.imode else 'Non-efficient / Exact'))
     print(' ================== \n ')
 
 
