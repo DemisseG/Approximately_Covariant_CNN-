@@ -19,6 +19,7 @@
 
 exTYPE=(0)                   # 0 is for robustness and 1 for discriminative experimental setup
 model=(8 18 36)              # Resnet model size
+normalize=(0 1 1)            # do not normalize covariance measure for small models; normalize only for large models
 conv_type=("conv" "covar")   # conv -- a model trained with conventional convs / covar -- a model trained with AC-based approach
 symset=(0 1)                 # symmetry sets to be invariant to. The possible variations are described below 
                              # [0 = rotation, 1 = densly sampled rotation, 2 = horizontal flip, 3 = scaling, 4 = composition of scaling and reflection]
@@ -42,7 +43,7 @@ while [ $j -le 1 ]; do
     else
         echo "AC-based training and testing ..... "
     fi
-    python3 main.py -lr $learning_rate -opt adam -bs $batchSIZE -ep $epoch -d ${model[0]} -ty $exTYPE \
+    python3 main.py -lr $learning_rate -opt adam -bs $batchSIZE -ep $epoch -d ${model[0]} -n ${normalize[0]} -ty $exTYPE \
                     -ct ${conv_type[$j]} -ss ${symset[0]} -ds rotmnist -dp "$(pwd)/data" -fp ${results[$j]} -fx $folder_name
     ((j++))
 done
