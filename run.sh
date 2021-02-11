@@ -13,7 +13,7 @@
 #   1.2 large images, e.g., Imagenet 
 #   1.3 large symmetry set, i.e., cardinality(sym_set) > 4
 # 2. Use Adam as an optimizer for small models with small batch size, it is much more forgiving than SGD to suboptimal initialization.
-# 3**** The unnormalized covariance measure is much easier to optimize in small models: set -n 0 ****
+# 3  The unnormalized covariance measure is much easier to optimize in small models like ResNet8 to do that pass: -n 0. 
 #==========================================================
 
 
@@ -51,5 +51,5 @@ done
 #python3 main.py -lr 0.1 -opt sgd -bs 120 -ep 200 -d 18 -ct covar -ds cifar10 -ss 4 -dp "${cwd}data" -fp "${cwd}exper" -fx "${cwd}exper"
 
 #-- Example of testing the efficient inference 
-#python3 main.py -lr 0.01 -opt adam -bs 100 -ep 200 -d 8 -ct covar -ss 0 -im 1 -ty 1 -ds rotmnist -dp "${cwd}data" -fp "${cwd}exper" -fx "${cwd}exper"
+#python3 main.py -lr 0.01 -opt adam -bs 100 -ep 200 -d 8 -ct covar -ss 0 -im 1 -ty 1 -n 0 -ds rotmnist -dp "${cwd}data" -fp "${cwd}exper" -fx "${cwd}exper"
 
