@@ -18,45 +18,18 @@ from data import dataloaders
 from data import data
 from ac import utils
 from models import resnet_backbone as models
- 
+import config
 
-
-#  global variables
-trainloader = None
-testloader  = None
-num_classes = None
-entropy = None
-args = None
-path = None
-PERFORMANCE_DETAILS = 0
-INPUT_CHANNEL = 1
-
-report = {
-        'Progress': {
-            'test_acc': [],
-            'train_acc': [],
-            'test_loss': [],
-            'train_loss': [],
-        },
-        'Final': {
-            'target': [],
-            'output_pre': [],
-            'pred_prob': [],
-        }
-    }
-
-best_acc = 0.0
 use_cuda = torch.cuda.is_available()
 
-def config():
+def parse():
     # TODO: convert to config file.
-    global args
     parser = argparse.ArgumentParser(description="==> Training and testing script for Approximately covariant (AC) convolutional network <==")
     parser.add_argument('-lr', '--l_rate', metavar='\b', default=0.1, type=float, help='  Learning_rate')
     parser.add_argument('-bs', '--batch', metavar='\b', default=128, type=int, help='  Batch size')
     parser.add_argument('-opt', '--optim', metavar='\b', default="adam", help='optim = [adam / sgd]  ... ')
     parser.add_argument('-ep', '--epoch', metavar='\b', default=100, type=int, help='Epoch training')
-    parser.add_argument('-d', '--depth', metavar='\b', default=18, type=int, help='Depth = [ 8 / 18 / 36 / 50]')
+    parser.add_argument('-d', '--depth', metavar='\b', default=18, type=int, help='Depth = [ 8 / 10 / 18 / 36 / 50 / 101]')
     parser.add_argument('-ty', '--trainType', metavar='\b',  default=0, type=int, help='Training type for the discriminative experiment.\
          ty = [0 = train and test on rot-MNIST, 1 = train on rot-MNIST and test on MNIST]')
     parser.add_argument('-im', '--imode', metavar='\b',  default=0, type=int, help='Inference mode = [0 (exact inference) / 1 (efficient inference)]:')
@@ -68,41 +41,38 @@ def config():
     parser.add_argument('-dp', '--datapath', metavar='\b', type=str, help='directory path to the dataset location')
     parser.add_argument('-fp', '--filepath', metavar='\b', default=os.getcwd(), type=str, help='File path for saving checkpoints and experimental results. DEFAULT =  current working directory.')
     parser.add_argument('-fx', '--fixed_init', metavar='\b', default=None, type=str, help='Path to fixed inital parameters to start the model training. DEFAULT = current working directory.')
-    args = parser.parse_args()
+    config.args = parser.parse_args()
 
 
 def prepare_data():
-    global trainloader
-    global testloader
-    global num_classes
-    global INPUT_CHANNEL 
+    config.args.datapath = os.getcwd() + '/data' if config.args.datapath == None else config.args.datapath
 
-    if args.datasets == 'cifar10' or args.datasets == 'cifar100':
-        trainset, testset = dataloaders.CIFARX(args.datasets, args.datapath)
-        num_classes = 10 if args.datasets == 'cifar10' else 100
-        INPUT_CHANNEL = 3
-    elif args.datasets == 'rotmnist':
-        trainset, testset = dataloaders.ROTMNIST(args.datapath, args.trainType)
-        num_classes = 10
-        INPUT_CHANNEL = 1
-    elif args.datasets == 'imagenet':
-        trainset, testset = dataloaders.IMAGENET(args.datapath)
-        num_classes = 1000
-        INPUT_CHANNEL = 3
+    if config.args.datasets == 'cifar10' or config.args.datasets == 'cifar100':
+        trainset, testset = dataloaders.CIFARX(config.args.datasets, config.args.datapath)
+        config.num_classes = 10 if config.args.datasets == 'cifar10' else 100
+        config.INPUT_CHANNEL = 3
+    elif config.args.datasets == 'rotmnist':
+        trainset, testset = dataloaders.ROTMNIST(config.args.datapath, config.args.trainType)
+        config.num_classes = 10
+        config.INPUT_CHANNEL = 1
+    elif config.args.datasets == 'imagenet':
+        trainset, testset = dataloaders.IMAGENET(config.args.datapath)
+        config.num_classes = 1000
+        config.INPUT_CHANNEL = 3
     else:
         print('Error : Dataset should be either [ cifar10 / cifar100 / rotmnist / imagenet ]')
         sys.exit(0)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=args.batch, shuffle=True, num_workers=4)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch, shuffle=False, num_workers=4)
+    config.trainloader = torch.utils.data.DataLoader(trainset, batch_size=config.args.batch, shuffle=True, num_workers=4)
+    config.testloader = torch.utils.data.DataLoader(testset, batch_size=config.args.batch, shuffle=False, num_workers=4)
 
 
 def load_network():
-    assert args.depth in [8, 10, 18, 34, 50, 101], 'Error: Choose depth as [8, 10, 18, 34, 50, 101]'
-    net = models.getResNet(args.convType, 
-                        args.depth, 
-                        num_classes,
-                        INPUT_CHANNEL,
-                        args.symset)
+    assert config.args.depth in [8, 10, 18, 34, 50, 101], 'Error: Choose depth as [8, 10, 18, 34, 50, 101]'
+    net = models.getResNet(config.args.convType, 
+                        config.args.depth, 
+                        config.num_classes,
+                        config.INPUT_CHANNEL,
+                        config.args.symset)
     return net
 
 
@@ -129,20 +99,19 @@ def train(net: models.ResNetCustom,
          current_epoch: int, 
          criterion: torch.nn.modules.loss.CrossEntropyLoss):
 
-    global report
     net.train()
     manageModelParameters(net, torch.tensor(0), 'efficient_inference')
     
     train_loss = 0
     prec1, prec5, total = 0, 0, 0
-    assert args.optim in ['sgd', 'adam'], "Error. System only support [sgd / adam] optimizers"
+    assert config.args.optim in ['sgd', 'adam'], "Error. System only support [sgd / adam] optimizers"
 
-    if args.optim == "sgd":
-        optimizer = optim.SGD(net.parameters(), lr=utils.scheduled_learning(args.l_rate, current_epoch, args.epoch), momentum=0.9, weight_decay=5e-4, nesterov=True)
+    if config.args.optim == "sgd":
+        optimizer = optim.SGD(net.parameters(), lr=utils.scheduled_learning(config.args.l_rate, current_epoch, config.args.epoch), momentum=0.9, weight_decay=5e-4, nesterov=True)
     else:
-        optimizer = optim.Adam(net.parameters(), lr=args.l_rate, amsgrad=True)
+        optimizer = optim.Adam(net.parameters(), lr=config.args.l_rate, amsgrad=True)
     
-    for _, (inputs, targets) in enumerate(trainloader):
+    for _, (inputs, targets) in enumerate(config.trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         optimizer.zero_grad()
@@ -160,14 +129,14 @@ def train(net: models.ResNetCustom,
 
     prec1 = 100.*prec1/total
     prec5 = 100.*prec5/total
-    report['Progress']['train_loss'] += [train_loss]
-    report['Progress']['train_acc'] += [[prec1, prec5]]
+    config.report['Progress']['train_loss'] += [train_loss]
+    config.report['Progress']['train_acc'] += [[prec1, prec5]]
 
-    if args.imode:
+    if config.args.imode:
         manageModelParameters(net, utils.squeeze_entropy(current_epoch), 'entropy')
 
     print('\r')
-    if args.convType == 'covar':
+    if config.args.convType == 'covar':
         print('| Training epoch %d, entropy scale =%.4f' %(current_epoch, net.module.conv1.entropy.item()))
     print('| Training epoch %3d\t\tLoss: %.4f Acc@1: %.3f%%' %(current_epoch, loss.item(), prec1))
     print('| Training epoch %3d\t\tLoss: %.4f Acc@5: %.3f%%' %(current_epoch, loss.item(), prec5))
@@ -178,10 +147,7 @@ def test(net: models.ResNetCustom,
         criterion: torch.nn.modules.loss.CrossEntropyLoss, 
         final: bool=False):
 
-    global best_acc
-    global report
-
-    if args.imode:
+    if config.args.imode:
         manageModelParameters(net, torch.tensor(1), 'efficient_inference')
 
     net.eval()
@@ -191,7 +157,7 @@ def test(net: models.ResNetCustom,
     OutpredProb, Outpred, Target = [], [], []
 
     with torch.no_grad():
-        for _, (inputs, targets) in enumerate(testloader):
+        for _, (inputs, targets) in enumerate(config.testloader):
             if use_cuda:
                 inputs, targets = inputs.cuda(), targets.cuda()
 
@@ -212,17 +178,17 @@ def test(net: models.ResNetCustom,
 
     prec1 = 100.*prec1/total
     prec5 = 100.*prec5/total
-    report['Progress']['test_loss'] += [test_loss]
-    report['Progress']['test_acc'] += [[prec1, prec5]]
+    config.report['Progress']['test_loss'] += [test_loss]
+    config.report['Progress']['test_acc'] += [[prec1, prec5]]
 
     print("\n| Validation Epoch %d\t\tLoss: %.4f Acc@1: %.2f%%" %(current_epoch, loss.item(), prec1))
     print("| Validation Epoch %d\t\tLoss: %.4f Acc@5: %.2f%%" %(current_epoch, loss.item(), prec5))
 
-    if prec1 > best_acc:
+    if prec1 > config.best_acc:
         print('\n| Best accuracy! So far.')
         print('\tTop1 = %.2f%%' %(prec1))
         print('\tTop5 = %.2f%%' %(prec5))
-        best_acc = prec1
+        config.best_acc = prec1
 
     if (current_epoch % 20  == 0):
         try:
@@ -232,41 +198,35 @@ def test(net: models.ResNetCustom,
         state = {
                 'acc':prec1,
                 'epoch':current_epoch,
-                'lr': args.l_rate
+                'lr': config.args.l_rate
         }
         # save checkpoint every 20 epoch
-        save_point = args.filepath + os.sep + 'checkpoint_' +  str(current_epoch) + '_'
+        save_point = config.args.filepath + os.sep + 'checkpoint_' +  str(current_epoch) + '_'
         torch.save(state_dict, save_point +'.pt')
-        hyper_point = args.filepath + os.sep + 'checkpoint_metadata_' + str(current_epoch) + '_.p'
+        hyper_point = config.args.filepath + os.sep + 'checkpoint_metadata_' + str(current_epoch) + '_.p'
         with open(hyper_point, 'wb') as f1:
             pickle.dump(state, f1)
 
     if final:
-        report['Final']['output_pre'] = torch.cat(Outpred, 0).cpu()
-        report['Final']['pred_prob'] = torch.cat(OutpredProb, 0).cpu()
-        report['Final']['target'] = torch.cat(Target, 0).cpu()
-
+        config.report['Final']['output_pre'] = torch.cat(Outpred, 0).cpu()
+        config.report['Final']['pred_prob'] = torch.cat(OutpredProb, 0).cpu()
+        config.report['Final']['target'] = torch.cat(Target, 0).cpu()
 
 def main():
     # training and testing logic
-    global args 
-
-    config()
-    verbose()
-    prepare_data()
     start_epoch = 0
     criterion = nn.CrossEntropyLoss()
     net = load_network()
 
-    if args.fixed_init:
-        args.fixed_init += '/init.pt'
-        if not os.path.exists(args.fixed_init):
-            torch.save(net.state_dict(), args.fixed_init)
+    if config.args.fixed_init:
+        config.args.fixed_init += '/init.pt'
+        if not os.path.exists(config.args.fixed_init):
+            torch.save(net.state_dict(), config.args.fixed_init)
             print("\n Saving current inital state for later ....")
         else:
             try:
                 print("\n Loading initalization ... ")
-                net.load_state_dict(torch.load(args.fixed_init))
+                net.load_state_dict(torch.load(config.args.fixed_init))
             except:
                 print("\n Error: There is a mismatch between model specification and saved inital parameters! ")
                 raise SystemExit
@@ -276,34 +236,35 @@ def main():
         net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
         cudnn.benchmark = True
 
-    if not args.normalize:
+    if not config.args.normalize:
         manageModelParameters(net, torch.tensor(0), 'normalize')
        
-    for e in range(start_epoch, start_epoch+args.epoch):
+    for e in range(start_epoch, start_epoch+config.args.epoch):
         train(net, e, criterion)
-        test(net, e, criterion, (e == args.epoch-1))
+        test(net, e, criterion, (e == config.args.epoch-1))
  
-    with open(args.filepath + '/Result_report_on_' + args.datasets +'.p', 'wb') as f1:
-        pickle.dump(report, f1)
+    with open(config.args.filepath + '/Result_report_on_' + config.args.datasets +'.p', 'wb') as f1:
+        pickle.dump(config.report, f1)
 
     print('\n: Best model accuracy for testing')
-    print('* Test results : Acc@1 = %.2f%%' %(best_acc))
+    print('* Test results : Acc@1 = %.2f%%' %(config.best_acc))
 
-    if PERFORMANCE_DETAILS:
+    if config.PERFORMANCE_DETAILS:
         final_performance() 
 
 
 def verbose():
     print('\n [ Training model ]')
     print(' ================== ')
-    print('| Training Epochs = ' + str(args.epoch))
-    print('| Initial Learning Rate = ' + str(args.l_rate))
-    print('| Optimizer = ' + str(args.optim))
-    print('| Filter type = ' + str(args.convType))
-    if args.convType == 'covar':
-        print('| Symmetry set = ' + utils.AUGMENTED_TRANS_SET[args.symset])
-        print('| Normalization of covariance measure = ' + ('YES' if args.normalize else 'NO'))
-        print('| Inference Mode = ' + ('Efficient / Approximate' if args.imode else 'Non-efficient / Exact'))
+    print('| Training Epochs = ' + str(config.args.epoch))
+    print('| Initial Learning Rate = ' + str(config.args.l_rate))
+    print('| Batch size = ' + str(config.args.batch))
+    print('| Optimizer = ' + str(config.args.optim))
+    print('| Filter type = ' + str(config.args.convType))
+    if config.args.convType == 'covar':
+        print('| Symmetry set = ' + config.AUGMENTED_TRANS_SET[config.args.symset])
+        print('| Normalization of covariance measure = ' + ('YES' if config.args.normalize else 'NO'))
+        print('| Inference Mode = ' + ('Efficient / Approximate' if config.args.imode else 'Non-efficient / Exact'))
     print(' ================== \n ')
 
 
@@ -313,12 +274,12 @@ def final_performance():
     import numpy 
     import warnings
 
-    with open(args.filepath + '/Result_report_on_' + args.datasets +'.p', 'rb') as f1:
+    with open(config.args.filepath + '/Result_report_on_' + config.args.datasets +'.p', 'rb') as f1:
         report = pickle.load(f1)
 
-    if args.datasets == 'rotmnist':    
+    if config.args.datasets == 'rotmnist':    
         label_set = ('Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine')
-    elif args.datasets == 'cifar10':
+    elif config.args.datasets == 'cifar10':
         label_set = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
     else:
         warnings.warn('Label names is assigned to NONE! Figures will display numbers instead.')

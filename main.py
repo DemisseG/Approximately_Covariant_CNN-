@@ -6,4 +6,7 @@ from __future__ import absolute_import, division
 import trainlogic  as tl 
 
 if __name__ == "__main__": 
+    tl.parse()
+    tl.verbose()
+    tl.prepare_data()
     tl.main() 

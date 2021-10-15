@@ -8,7 +8,9 @@ import math
 import torch.nn.functional as F
 
 from ac import utils
-domain_sym = utils.AUGMENTED_TRANS_SET[0]
+import config 
+
+domain_sym = config.AUGMENTED_TRANS_SET[0]
 
 class ac_conv(nn.Conv2d):
     _pd = 2
@@ -64,7 +66,6 @@ class ac_conv(nn.Conv2d):
             return F.conv2d(data, self.weight, self.bias, self.stride, 1, self.dilation, self.groups)
         else:
             return self.stable_response(data)
-
 
 
 """

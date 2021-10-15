@@ -3,6 +3,7 @@ The baseline model exetnds Pytorch's implementation of ResNet.
 """
 
 
+
 from __future__ import absolute_import, division
 import torch
 from torch import nn
@@ -11,10 +12,9 @@ import math
 import numpy
 
 from ac import ac_conv
-
+import config
 
 TRACK = False           # batch statistics tracker--- affects mainly ineference
-INPUT_CHANNEL = 1       # size of the input data channel 
 
 def conv3x3(in_planes, out_planes, stride=1, conv_type='conv', groups=1, dilation=1):
     if conv_type == 'conv':
@@ -23,6 +23,9 @@ def conv3x3(in_planes, out_planes, stride=1, conv_type='conv', groups=1, dilatio
     else:
         return ac_conv.ac_conv(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=0, groups=groups, bias=False, dilation=dilation)
+
+        # return ac_conv.ac_conv2(in_planes, out_planes, kernel_size=3, stride=stride,
+        #              padding=0, groups=groups, bias=False, dilation=dilation)
 
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
@@ -132,12 +135,15 @@ class ResNetCustom(nn.Module):
         self.groups = groups
         self.base_width = width_per_group
 
+        '''
         if block.conv_type == 'conv':
-            self.conv1 = nn.Conv2d(INPUT_CHANNEL, self.inplanes, kernel_size=3, stride=1, padding=1,
+            self.conv1 = nn.Conv2d(config.INPUT_CHANNEL, self.inplanes, kernel_size=3, stride=1, padding=1,
                                   bias=False) 
         else:
-            self.conv1 = ac_conv.ac_conv(INPUT_CHANNEL, self.inplanes, kernel_size=3, stride=1, padding=0,
+            self.conv1 = ac_conv.ac_conv(config.INPUT_CHANNEL, self.inplanes, kernel_size=3, stride=1, padding=0,
                                   bias=False)  
+        '''
+        self.conv1 = conv3x3(config.INPUT_CHANNEL, self.inplanes, 1, block.conv_type)
 
         self.bn1 = norm_layer(self.inplanes, track_running_stats=TRACK)
         self.relu = nn.ReLU(inplace=True)
@@ -246,12 +252,9 @@ class ResNetCustom(nn.Module):
 
 
 def getResNet(conv_type, depth, num_classes, num_channel=1, sym_type=0):
-    from ac import utils
     
-    global INPUT_CHANNEL 
-    INPUT_CHANNEL = num_channel
-
-    ac_conv.domain_sym = utils.AUGMENTED_TRANS_SET[sym_type]
+    config.INPUT_CHANNEL = num_channel
+    ac_conv.domain_sym = config.AUGMENTED_TRANS_SET[sym_type]
     
     if depth == 8:
         BasicBlock.conv_type = conv_type

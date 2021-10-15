@@ -6,9 +6,6 @@ import numpy
 import torch
 
 
-# type of supported transformations 
-AUGMENTED_TRANS_SET = ['rot', 'rot_ext', 'ref', 'scale', 'scale_ref']
-
 def scheduled_learning(init: float, current_epoch: int, total_epoch: int) -> int:
     scale = lambda x, y :x * math.pow(0.2, y)
     if(current_epoch > int(total_epoch*0.8)):
@@ -78,6 +75,8 @@ def scale_ref() -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
 
 
 def domain_trans(tra_type: str) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    import config 
+    
     def get_trans(key_id):
         if key_id == 'rot':
             t, it =  rotation(0.5)
@@ -91,5 +90,5 @@ def domain_trans(tra_type: str) -> Tuple[List[torch.Tensor], List[torch.Tensor]]
             t, it = scale_ref()
         return t, it
 
-    assert tra_type in AUGMENTED_TRANS_SET, "Error: unkown transformation!" 
+    assert tra_type in config.AUGMENTED_TRANS_SET, "Error: unkown transformation!" 
     return get_trans(tra_type)
