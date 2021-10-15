@@ -18,7 +18,7 @@ Inorder to conduct a direct test, you need to donwload a test dataset and dump i
 * The software is developed and tested using python3 with Pytorch 1.7.1 and Cuda 10.2.
 You will need to have the latest versions of matplotlib, numpy, and pickle5, optuna, plotly. 
 * I highly recommend to use GPU's with RAM > 8GB. The current implementation of the AC unit is
-  both memeory and compute intesnive.
+  both memory and compute intesnive.
 
 ### How To:
 General approach
